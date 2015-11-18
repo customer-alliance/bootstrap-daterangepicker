@@ -77,7 +77,10 @@
             customRangeLabel: 'Custom Range',
             daysOfWeek: moment.weekdaysMin(),
             monthNames: moment.monthsShort(),
-            firstDay: moment.localeData().firstDayOfWeek()
+            firstDay: moment.localeData().firstDayOfWeek(),
+            fromLabel: 'From',
+            toLabel: 'To',
+            rangeLabel: 'Select range'
         };
 
         this.callback = function() { };
@@ -93,15 +96,34 @@
 
         //allow setting options with data attributes
         //data-api options will be overwritten with custom javascript options
-        options = $.extend(this.element.data(), options);
+        this.options = options = $.extend(this.element.data(), options);
+
+        // render ranges callback
+        if (typeof options.renderRanges !== 'function') {
+            options.renderRanges = function() {
+                var list = '<div class="form-group">' +
+                    '<label>'+this.locale.rangeLabel+'</label>' +
+                    '<select class="selectlist selectlist-primary selectlist-full selectlist-left">';
+
+                for (range in options.ranges) {
+                    list += '<option>' + range + '</option>';
+                }
+
+                list += '<option>' + this.locale.customRangeLabel + '</option>';
+                list += '</select></div>';
+
+                var $list = $(list);
+                this.container.find('.ranges').prepend($list);
+                $list.find('select').selectlist();
+            }
+
+        }
 
         //html template for the picker UI
         if (typeof options.template !== 'string')
             options.template = '<div class="daterangepicker dropdown-menu">' +
                 '<div class="calendar left">' +
                     '<div class="daterangepicker_input">' +
-                      '<input class="input-mini" type="text" name="daterangepicker_start" value="" />' +
-                      '<i class="fa fa-calendar glyphicon glyphicon-calendar"></i>' +
                       '<div class="calendar-time">' +
                         '<div></div>' +
                         '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
@@ -111,8 +133,6 @@
                 '</div>' +
                 '<div class="calendar right">' +
                     '<div class="daterangepicker_input">' +
-                      '<input class="input-mini" type="text" name="daterangepicker_end" value="" />' +
-                      '<i class="fa fa-calendar glyphicon glyphicon-calendar"></i>' +
                       '<div class="calendar-time">' +
                         '<div></div>' +
                         '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
@@ -121,10 +141,25 @@
                     '<div class="calendar-table"></div>' +
                 '</div>' +
                 '<div class="ranges">' +
-                    '<div class="range_inputs">' +
+                    '<div class="form-group">' +
+                        '<label>'+this.locale.fromLabel+'</label>' +
+                        '<div class="input-group input-group-sm">' +
+                            '<span class="input-group-addon"><i class="icon icon-xs icon-calendar3"></i></span>' +
+                            '<input type="text" class="form-control" name="daterangepicker_start">' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label>'+this.locale.toLabel+'</label>' +
+                        '<div class="input-group input-group-sm">' +
+                            '<span class="input-group-addon"><i class="icon icon-xs icon-calendar3"></i></span>' +
+                            '<input type="text" class="form-control" name="daterangepicker_end">' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="form-group">' +
                         '<button class="applyBtn" disabled="disabled" type="button"></button> ' +
                         '<button class="cancelBtn" type="button"></button>' +
                     '</div>' +
+
                 '</div>' +
             '</div>';
 
@@ -325,13 +360,7 @@
                 this.ranges[rangeHtml] = [start, end];
             }
 
-            var list = '<ul>';
-            for (range in this.ranges) {
-                list += '<li>' + range + '</li>';
-            }
-            list += '<li>' + this.locale.customRangeLabel + '</li>';
-            list += '</ul>';
-            this.container.find('.ranges').prepend(list);
+            $.proxy(options.renderRanges, this)();
         }
 
         if (typeof cb === 'function') {
@@ -408,9 +437,9 @@
         this.container.find('.ranges')
             .on('click.daterangepicker', 'button.applyBtn', $.proxy(this.clickApply, this))
             .on('click.daterangepicker', 'button.cancelBtn', $.proxy(this.clickCancel, this))
-            .on('click.daterangepicker', 'li', $.proxy(this.clickRange, this))
-            .on('mouseenter.daterangepicker', 'li', $.proxy(this.hoverRange, this))
-            .on('mouseleave.daterangepicker', 'li', $.proxy(this.updateFormInputs, this));
+            .on('change.daterangepicker', 'select', $.proxy(this.clickRange, this));
+            //.on('mouseenter.daterangepicker', 'li', $.proxy(this.hoverRange, this))
+            //.on('mouseleave.daterangepicker', 'li', $.proxy(this.updateFormInputs, this));
 
         if (this.element.is('input')) {
             this.element.on({
@@ -582,7 +611,6 @@
             this.renderCalendar('right');
 
             //highlight any predefined range matching the current start and end dates
-            this.container.find('.ranges li').removeClass('active');
             if (this.endDate == null) return;
 
             var customRange = true;
@@ -591,23 +619,25 @@
                 if (this.timePicker) {
                     if (this.startDate.isSame(this.ranges[range][0]) && this.endDate.isSame(this.ranges[range][1])) {
                         customRange = false;
-                        this.chosenLabel = this.container.find('.ranges li:eq(' + i + ')').addClass('active').html();
+                        this.chosenLabel = this.container.find('.ranges li:eq(' + i + ')').attr('data-value');
                         break;
                     }
                 } else {
                     //ignore times when comparing dates if time picker is not enabled
                     if (this.startDate.format('YYYY-MM-DD') == this.ranges[range][0].format('YYYY-MM-DD') && this.endDate.format('YYYY-MM-DD') == this.ranges[range][1].format('YYYY-MM-DD')) {
                         customRange = false;
-                        this.chosenLabel = this.container.find('.ranges li:eq(' + i + ')').addClass('active').html();
+                        this.chosenLabel = this.container.find('.ranges li:eq(' + i + ')').attr('data-value');
                         break;
                     }
                 }
                 i++;
             }
+
             if (customRange) {
-                this.chosenLabel = this.container.find('.ranges li:last').addClass('active').html();
-                this.showCalendars();
+                this.chosenLabel = this.container.find('.ranges li:last').attr('data-value');
             }
+
+            this.showCalendars();
 
         },
 
@@ -693,7 +723,7 @@
                 html += '<th></th>';
 
             if ((!minDate || minDate.isBefore(calendar.firstDay)) && (!this.linkedCalendars || side == 'left')) {
-                html += '<th class="prev available"><i class="fa fa-chevron-left glyphicon glyphicon-chevron-left"></i></th>';
+                html += '<th class="prev available"><i class="icon icon-chevron-left"></i></th>';
             } else {
                 html += '<th></th>';
             }
@@ -735,7 +765,7 @@
 
             html += '<th colspan="5" class="month">' + dateHtml + '</th>';
             if ((!maxDate || maxDate.isAfter(calendar.lastDay)) && (!this.linkedCalendars || side == 'right' || this.singleDatePicker)) {
-                html += '<th class="next available"><i class="fa fa-chevron-right glyphicon glyphicon-chevron-right"></i></th>';
+                html += '<th class="next available"><i class="icon icon-chevron-right"></i></th>';
             } else {
                 html += '<th></th>';
             }
@@ -1132,11 +1162,13 @@
             if (this.container.find('input[name=daterangepicker_start]').is(":focus") || this.container.find('input[name=daterangepicker_end]').is(":focus"))
                 return;
 
-            var label = e.target.innerHTML;
+            var label = $(e.target).attr('data-value');
+            console.log('hover label', label);
             if (label == this.locale.customRangeLabel) {
                 this.updateView();
             } else {
                 var dates = this.ranges[label];
+                console.log('dates', dates);
                 this.container.find('input[name=daterangepicker_start]').val(dates[0].format(this.locale.format));
                 this.container.find('input[name=daterangepicker_end]').val(dates[1].format(this.locale.format));
             }
@@ -1144,8 +1176,7 @@
         },
 
         clickRange: function(e) {
-            var label = e.target.innerHTML;
-            this.chosenLabel = label;
+            var label = $(e.target).val();
             if (label == this.locale.customRangeLabel) {
                 this.showCalendars();
             } else {
@@ -1158,8 +1189,7 @@
                     this.endDate.endOf('day');
                 }
 
-                this.hideCalendars();
-                this.clickApply();
+                this.updateView();
             }
         },
 
@@ -1289,6 +1319,7 @@
                     this.clickApply();
             }
 
+            this.setRangeToCustom();
             if (this.singleDatePicker) {
                 this.setEndDate(this.startDate);
                 if (!this.timePicker)
@@ -1422,6 +1453,7 @@
 
             }
 
+            this.setRangeToCustom();
             this.updateCalendars();
             if (this.timePicker) {
                 this.renderTimePicker('left');
@@ -1476,6 +1508,11 @@
             this.container.remove();
             this.element.off('.daterangepicker');
             this.element.removeData();
+        },
+
+        // set the range to default
+        setRangeToCustom: function() {
+            this.container.find('div.selectlist li:last-child > a').click();
         }
 
     };
