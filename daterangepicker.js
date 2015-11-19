@@ -68,6 +68,17 @@
         this.applyClass = 'btn-success';
         this.cancelClass = 'btn-default';
 
+        // set weekdays by default to not selected
+        this.weekdays = {
+            1: false,
+            2: false,
+            3: false,
+            4: false,
+            5: false,
+            6: false,
+            7: false
+        };
+
         this.locale = {
             format: 'MM/DD/YYYY',
             separator: ' - ',
@@ -80,7 +91,8 @@
             firstDay: moment.localeData().firstDayOfWeek(),
             fromLabel: 'From',
             toLabel: 'To',
-            rangeLabel: 'Select range'
+            rangeLabel: 'Select range',
+            weekdaysLabel: 'Would you like to select specific weekdays?'
         };
 
         this.callback = function() { };
@@ -115,32 +127,60 @@
                 var $list = $(list);
                 this.container.find('.ranges').prepend($list);
                 $list.find('select').selectlist();
+                this.element.trigger('rendered-rangesh.daterangepicker', this);
             }
 
         }
 
+        // render ranges callback
+        if (typeof options.renderWeekdays !== 'function') {
+            options.renderWeekdays = function() {
+                var $weekdaysLabel = $('<label>'+this.locale.weekdaysLabel+'</label>'),
+                    $weekdaysList = $('<ul class="list list-unstyled list-inline"></ul>'),
+                    daysOfWeek = this.locale.daysOfWeek,
+                    selected, $li;
+
+                for (var index = 1; index <= 7; index++) {
+                    $li = $('<li><input type="checkbox"> '+daysOfWeek[index-1]+'</li>');
+                    $li.find('input').val(index);
+                    $li.find('input').prop('checked', this.weekdays[index]);
+                    $weekdaysList.append($li);
+                }
+
+                this.container.find('.weekdays').html($weekdaysList);
+                this.container.find('.weekdays').prepend($weekdaysLabel);
+                this.element.trigger('rendered-weekdays.daterangepicker', this);
+            };
+        }
+
+        // default weekdays value
+        this.options.showWeekdays = this.options.showWeekdays == 'true' || this.options.showWeekdays == 1;
+
         //html template for the picker UI
         if (typeof options.template !== 'string')
             options.template = '<div class="daterangepicker dropdown-menu">' +
-                '<div class="calendar left">' +
-                    '<div class="daterangepicker_input">' +
-                      '<div class="calendar-time">' +
-                        '<div></div>' +
-                        '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
-                      '</div>' +
+                '<div class="calendars pull-left">'+
+                    '<div class="calendar left">' +
+                        '<div class="daterangepicker_input">' +
+                          '<div class="calendar-time">' +
+                            '<div></div>' +
+                            '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
+                          '</div>' +
+                        '</div>' +
+                        '<div class="calendar-table"></div>' +
                     '</div>' +
-                    '<div class="calendar-table"></div>' +
-                '</div>' +
-                '<div class="calendar right">' +
-                    '<div class="daterangepicker_input">' +
-                      '<div class="calendar-time">' +
-                        '<div></div>' +
-                        '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
-                      '</div>' +
+                    '<div class="calendar right">' +
+                        '<div class="daterangepicker_input">' +
+                          '<div class="calendar-time">' +
+                            '<div></div>' +
+                            '<i class="fa fa-clock-o glyphicon glyphicon-time"></i>' +
+                          '</div>' +
+                        '</div>' +
+                        '<div class="calendar-table"></div>' +
                     '</div>' +
-                    '<div class="calendar-table"></div>' +
+                    '<div class="weekdays"></div>' +
                 '</div>' +
-                '<div class="ranges">' +
+                '<div class="ranges pull-left">' +
                     '<div class="form-group">' +
                         '<label>'+this.locale.fromLabel+'</label>' +
                         '<div class="input-group input-group-sm">' +
@@ -159,7 +199,6 @@
                         '<button class="applyBtn" disabled="disabled" type="button"></button> ' +
                         '<button class="cancelBtn" type="button"></button>' +
                     '</div>' +
-
                 '</div>' +
             '</div>';
 
@@ -197,7 +236,10 @@
               this.locale.weekLabel = options.locale.weekLabel;
 
             if (typeof options.locale.customRangeLabel === 'string')
-              this.locale.customRangeLabel = options.locale.customRangeLabel;
+                this.locale.customRangeLabel = options.locale.customRangeLabel;
+
+            if (typeof options.locale.weekdaysLabel === 'string')
+                this.locale.weekdaysLabel = options.locale.weekdaysLabel;
 
         }
 
@@ -441,6 +483,9 @@
             //.on('mouseenter.daterangepicker', 'li', $.proxy(this.hoverRange, this))
             //.on('mouseleave.daterangepicker', 'li', $.proxy(this.updateFormInputs, this));
 
+        this.container.find('.weekdays')
+            .on('change.daterangepicker', 'input[type=checkbox]', $.proxy(this.clickWeekday, this));
+
         if (this.element.is('input')) {
             this.element.on({
                 'click.daterangepicker': $.proxy(this.show, this),
@@ -547,6 +592,7 @@
             this.updateMonthsInView();
             this.updateCalendars();
             this.updateFormInputs();
+            this.updateWeekdays();
         },
 
         updateMonthsInView: function() {
@@ -1111,7 +1157,7 @@
 
             //if a new date range was selected, invoke the user callback function
             if (!this.startDate.isSame(this.oldStartDate) || !this.endDate.isSame(this.oldEndDate))
-                this.callback(this.startDate, this.endDate, this.chosenLabel);
+                this.callback(this.startDate, this.endDate, this.chosenLabel, this.weekdays);
 
             //if picker is attached to a text input, update it
             this.updateElement();
@@ -1163,16 +1209,52 @@
                 return;
 
             var label = $(e.target).attr('data-value');
-            console.log('hover label', label);
             if (label == this.locale.customRangeLabel) {
                 this.updateView();
             } else {
                 var dates = this.ranges[label];
-                console.log('dates', dates);
                 this.container.find('input[name=daterangepicker_start]').val(dates[0].format(this.locale.format));
                 this.container.find('input[name=daterangepicker_end]').val(dates[1].format(this.locale.format));
             }
-            
+
+        },
+
+        updateWeekdays: function() {
+
+            // render the weekdays
+            if (this.options.showWeekdays) {
+                $.proxy(this.options.renderWeekdays, this)();
+            } else {
+                this.container.find('.weekdays').remove();
+                return;
+            }
+
+            // reset all selected
+            this.container.find('.calendar-table').removeClass('weekdays-selected');
+            this.container.find('.calendar-table td.selected').removeClass('selected');
+
+            // loop through all days and mark as selected if needed
+            var atLaestOneSelected = false;
+            for (var i=1; i<=7; i++) {
+                if (this.weekdays[i]) {
+                    // mark columns as selected
+                    this.container.find('.calendar-table tr > td:nth-child('+i+')').toggleClass('selected');
+                    atLaestOneSelected = true;
+                }
+            }
+
+            // if at laest one selected, mark the calendar
+            if (atLaestOneSelected) {
+                this.container.find('.calendar-table').addClass('weekdays-selected');
+            }
+        },
+
+        clickWeekday: function(e) {
+            var $target = $(e.target),
+                index = $target.val();
+
+            this.weekdays[index] = !this.weekdays[index];
+            this.updateWeekdays();
         },
 
         clickRange: function(e) {
@@ -1203,6 +1285,7 @@
                 this.rightCalendar.month.subtract(1, 'month');
             }
             this.updateCalendars();
+            this.updateWeekdays();
         },
 
         clickNext: function(e) {
@@ -1215,6 +1298,7 @@
                     this.leftCalendar.month.add(1, 'month');
             }
             this.updateCalendars();
+            this.updateWeekdays();
         },
 
         hoverDate: function(e) {

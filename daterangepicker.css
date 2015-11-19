@@ -349,3 +349,32 @@
     clear: none;
   }
 }
+
+/** selected weekdays **/
+.daterangepicker .calendar-table.weekdays-selected .active.selected:not(.off),
+.daterangepicker .calendar-table.weekdays-selected .in-range.selected:not(.off) {
+  background: #357ebd;
+}
+
+.daterangepicker .calendar-table.weekdays-selected .active:not(.selected.off),
+.daterangepicker .calendar-table.weekdays-selected .in-range:not(.selected.off) {
+  background: #95c2da;
+}
+
+.daterangepicker .weekdays {
+  margin: 4px;
+  max-width: 474px;
+}
+
+.daterangepicker .weekdays ul {
+  padding: 4px;
+  margin-left: 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.daterangepicker label {
+  font-size: 13px;
+  font-weight: bold;
+}
+
