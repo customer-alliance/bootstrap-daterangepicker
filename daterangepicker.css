@@ -16,7 +16,6 @@
   padding: 4px;
   margin-top: 1px;
   border-radius: 4px;
-  width:278px;
 }
 
 .daterangepicker.opensleft:before {
@@ -287,10 +286,7 @@
 }
 
 /*  Larger Screen Styling */
-@media (min-width: 564px) {
-  .daterangepicker{
-    width: auto;
-  }
+@media (min-width: 768px) {
 
   .daterangepicker .ranges ul {
     width: 160px;
@@ -337,16 +333,6 @@
   .daterangepicker .ranges,
   .daterangepicker .calendar {
     float: left;
-  }
-}
-
-@media (min-width: 730px) {
-  .daterangepicker .ranges {
-    width: auto;
-    float: left;
-  }
-  .daterangepicker .calendar.left {
-    clear: none;
   }
 }
 

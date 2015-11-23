@@ -156,6 +156,11 @@
         // default weekdays value
         this.options.showWeekdays = this.options.showWeekdays == 'true' || this.options.showWeekdays == 1;
 
+        // set passed weekdays
+        if (typeof options.weekdays === 'object') {
+            this.weekdays = options.weekdays;
+        }
+
         //html template for the picker UI
         if (typeof options.template !== 'string')
             options.template = '<div class="daterangepicker dropdown-menu">' +
@@ -589,6 +594,12 @@
                 this.container.find('input[name="daterangepicker_end"]').addClass('active');
                 this.container.find('input[name="daterangepicker_start"]').removeClass('active');
             }
+
+            // add type if set
+            if (typeof this.options.customize === 'string') {
+                this.container.addClass(this.options.customize);
+            }
+
             this.updateMonthsInView();
             this.updateCalendars();
             this.updateFormInputs();
@@ -1060,7 +1071,7 @@
         },
 
         move: function() {
-            var parentOffset = { top: 0, left: 0 },
+            var parentOffset = { top: -5, left: 0 },
                 containerTop;
             var parentRightEdge = $(window).width();
             if (!this.parentEl.is('body')) {
@@ -1155,9 +1166,7 @@
                 this.endDate = this.oldEndDate.clone();
             }
 
-            //if a new date range was selected, invoke the user callback function
-            if (!this.startDate.isSame(this.oldStartDate) || !this.endDate.isSame(this.oldEndDate))
-                this.callback(this.startDate, this.endDate, this.chosenLabel, this.weekdays);
+            this.callback(this.startDate, this.endDate, this.chosenLabel, this.weekdays);
 
             //if picker is attached to a text input, update it
             this.updateElement();
