@@ -1349,9 +1349,9 @@
                     var dt = cal.hasClass('left') ? leftCalendar.calendar[row][col] : rightCalendar.calendar[row][col];
 
                     if (dt.isAfter(startDate) && dt.isBefore(date)) {
-                        $(el).addClass('in-range');
+                        $(el).addClass('in-range in-range-hover');
                     } else {
-                        $(el).removeClass('in-range');
+                        $(el).removeClass('in-range in-range-hover');
                     }
 
                 });
